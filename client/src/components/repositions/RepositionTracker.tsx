@@ -430,27 +430,81 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {trackingData.history.map((entry: any) => (
-                    <div key={entry.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="font-medium">{entry.description}</p>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(entry.createdAt || entry.timestamp)}
-                        </p>
-                        {entry.userName && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Por: {entry.userName}
-                          </p>
-                        )}
-                        {entry.fromArea && entry.toArea && (
-                          <p className="text-sm text-purple-600">
-                            {getAreaDisplayName(entry.fromArea)} → {getAreaDisplayName(entry.toArea)}
-                          </p>
-                        )}
+                  {trackingData.history.map((entry: any, index: number) => {
+                    // Traducir las acciones comunes
+                    const getActionTranslation = (action: string, description: string) => {
+                      const translations: Record<string, string> = {
+                        'created': 'Reposición creada',
+                        'transfer_requested': 'Transferencia solicitada',
+                        'transfer_accepted': 'Transferencia aceptada',
+                        'transfer_rejected': 'Transferencia rechazada',
+                        'area_changed': 'Cambio de área',
+                        'status_updated': 'Estado actualizado',
+                        'completed': 'Reposición completada',
+                        'paused': 'Reposición pausada',
+                        'resumed': 'Reposición reanudada',
+                        'cancelled': 'Reposición cancelada',
+                        'updated': 'Información actualizada',
+                        'note_added': 'Nota agregada',
+                        'file_uploaded': 'Archivo subido',
+                        'priority_changed': 'Prioridad cambiada'
+                      };
+                      
+                      return translations[action] || description || action;
+                    };
+
+                    return (
+                      <div key={entry.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
+                          {index < trackingData.history.length - 1 && (
+                            <div className="w-px h-8 bg-gray-300 mt-2"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-1">
+                            <p className="font-medium text-gray-900">
+                              {getActionTranslation(entry.action, entry.description)}
+                            </p>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(entry.createdAt || entry.timestamp)}
+                            </span>
+                          </div>
+                          
+                          {entry.fromArea && entry.toArea && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {getAreaDisplayName(entry.fromArea)}
+                              </span>
+                              <ArrowRight className="w-3 h-3 text-gray-400" />
+                              <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                {getAreaDisplayName(entry.toArea)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {entry.userName && (
+                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              Realizado por: <span className="font-medium">{entry.userName}</span>
+                            </p>
+                          )}
+                          
+                          {entry.notes && (
+                            <p className="text-sm text-gray-600 mt-1 italic">
+                              "{entry.notes}"
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 text-center">
+                    Total de eventos: {trackingData.history.length}
+                  </p>
                 </div>
               </CardContent>
             </Card>

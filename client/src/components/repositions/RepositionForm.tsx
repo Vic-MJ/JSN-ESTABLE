@@ -821,29 +821,30 @@ import { useEffect } from 'react';
                                 <div className="flex-1">
                                   <Label>Cantidad</Label>
                                   <Input
-                                    type="number"
-                                    min="1"
-                                    value={piece.cantidad === 1 ? '' : piece.cantidad}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (value === '' || value === '0') {
-                                        updateProductPiece(productIndex, pieceIndex, 'cantidad', '');
-                                      } else {
-                                        const numValue = parseInt(value);
-                                        if (!isNaN(numValue) && numValue > 0) {
-                                          updateProductPiece(productIndex, pieceIndex, 'cantidad', numValue);
-                                        }
-                                      }
-                                    }}
-                                    onBlur={(e) => {
-                                      if (e.target.value === '' || e.target.value === '0') {
-                                        updateProductPiece(productIndex, pieceIndex, 'cantidad', 1);
-                                      }
-                                    }}
-                                    placeholder="1"
-                                    className="text-center"
-                                    uppercase={true}
-                                  />
+                                          type="text"
+                                          inputMode="numeric"
+                                          pattern="[0-9]*"
+                                          value={piece.cantidad || ""}
+                                          onChange={(e) => {
+                                            const raw = e.target.value;
+
+                                            // permitir vacío, pero quitar cualquier cosa que no sea número
+                                            const onlyNums = raw.replace(/\D/g, "");
+
+                                            // guardamos SIEMPRE string
+                                            updateProductPiece(productIndex, pieceIndex, "cantidad", onlyNums);
+                                          }}
+                                          onBlur={(e) => {
+                                            const val = e.target.value;
+                                            if (val === "" || val === "0") {
+                                              updateProductPiece(productIndex, pieceIndex, "cantidad", "1");
+                                            }
+                                          }}
+                                          placeholder="1"
+                                          className="text-center"
+                                        />
+
+
                                 </div>
                                 <div className="flex-1">
                                   <Label>No° Folio Original</Label>

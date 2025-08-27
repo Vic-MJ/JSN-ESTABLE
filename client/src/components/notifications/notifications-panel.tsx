@@ -139,41 +139,48 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
     return names[area] || area;
   };
 
-  const formatDate = (dateInput: string | Date) => {
-    const date = typeof dateInput === "string" 
-      ? new Date(dateInput.endsWith('Z') ? dateInput : dateInput + 'Z')
-      : dateInput;
-
+  const formatTimeAgo = (dateInput: string | Date) => {
+    // Convertir a Date si es string
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
     const now = new Date();
-    const mexicoNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-    const mexicoDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
 
-    const diffMs = mexicoNow.getTime() - mexicoDate.getTime();
+    // Calcular diferencia directamente sin conversiones adicionales
+    const diffMs = now.getTime() - date.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    const timeFormat = date.toLocaleString('es-ES', { 
+    // Formato de hora local (sin especificar zona horaria)
+    const timeFormat = date.toLocaleString("es-MX", { 
+      timeZone: "America/Mexico_City",
       hour: '2-digit', 
       minute: '2-digit',
-      timeZone: 'America/Mexico_City'
+      hour12: false
     });
 
-    if (diffDays > 0) {
-      return `Hace ${diffDays} día${diffDays > 1 ? "s" : ""} - ${date.toLocaleString('es-ES', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Mexico_City'
-      })}`;
+    const dateTimeFormat = date.toLocaleString("es-MX", { 
+      timeZone: "America/Mexico_City",
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false
+    });
+
+    if (diffDays > 7) {
+      // Para fechas muy antiguas, mostrar fecha completa
+      return dateTimeFormat;
+    } else if (diffDays > 0) {
+      return `Hace ${diffDays} día${diffDays > 1 ? "s" : ""} - ${timeFormat}`;
     } else if (diffHours > 0) {
       return `Hace ${diffHours} hora${diffHours > 1 ? "s" : ""} - ${timeFormat}`;
-    } else if (diffMinutes > 0) {
+    } else if (diffMinutes > 5) {
       return `Hace ${diffMinutes} minuto${diffMinutes > 1 ? "s" : ""} - ${timeFormat}`;
+    } else if (diffMinutes > 0) {
+      return `Hace ${diffMinutes} minuto${diffMinutes > 1 ? "s" : ""}`;
     } else {
-      return `Hace unos segundos - ${timeFormat}`;
+      return "Hace unos segundos";
     }
   };
 
@@ -304,15 +311,8 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                   Limpiar todo
                 </Button>
               )}
-              {/* {totalNotifications > 0 && (
-                <Badge className="bg-destructive text-destructive-foreground border-0 shadow-sm">
-                  {totalNotifications}
-                </Badge>
-              )} */}
             </div>
           </SheetTitle>
-
-
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto py-6 space-y-4 max-h-[calc(100vh-12rem)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
@@ -351,7 +351,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                             </Badge>
                           )}
                           <span className="text-xs text-muted-foreground">
-                            {formatDate(notification.createdAt)}
+                            {formatTimeAgo(notification.createdAt)}
                           </span>
                         </div>
                         {notification.type === 'completion_approval_needed' && (
@@ -400,7 +400,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                           {transfer.pieces} piezas desde {getAreaDisplayName(transfer.fromArea)}
                         </h4>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(transfer.createdAt)}
+                          {formatTimeAgo(transfer.createdAt)}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-2 mt-3">
                           <Button
