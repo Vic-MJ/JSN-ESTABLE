@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/layout/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar, Filter, Download, Trash2, Eye, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, Calendar, Filter, Download, Trash2, Eye, FileText, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { type Order, type Area } from "@shared/schema";
+import { type Reposition, type Area } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { OrderHistoryModal } from "@/components/orders/order-history-modal";
-import { OrderDetailsModal } from "@/components/orders/order-details-modal";
+import { HistoryTimeline } from "@/components/shared/HistoryTimeline";
 import { apiRequest } from "@/lib/queryClient";
 import Swal from 'sweetalert2';
 
@@ -20,21 +21,20 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
-  const [sizeFilter, setSizeFilter] = useState<string>("all");
-  const [completionTimeFilter, setCompletionTimeFilter] = useState<string>("all");
-  const [includePaused, setIncludePaused] = useState(false);
+  const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [accidentFilter, setAccidentFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<string>("desc");
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [selectedRepositionId, setSelectedRepositionId] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders"],
+  const { data: repositions = [], isLoading } = useQuery<Reposition[]>({
+    queryKey: ["/api/repositions/history"],
   });
 
   const getAreaDisplayName = (area: Area) => {
@@ -65,9 +65,23 @@ export default function HistoryPage() {
   };
 
   const getStatusBadgeColor = (status: string) => {
-    return status === 'completed' 
-      ? "status-completed"
-      : "status-active";
+    const colors: Record<string, string> = {
+      'completado': "bg-green-100 text-green-800",
+      'en_proceso': "bg-blue-100 text-blue-800",
+      'pendiente': "bg-yellow-100 text-yellow-800",
+      'cancelado': "bg-red-100 text-red-800",
+      'pausado': "bg-gray-100 text-gray-800"
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getUrgencyBadgeColor = (urgency: string) => {
+    const colors: Record<string, string> = {
+      'alta': "bg-red-100 text-red-800",
+      'media': "bg-yellow-100 text-yellow-800",
+      'baja': "bg-green-100 text-green-800"
+    };
+    return colors[urgency] || "bg-gray-100 text-gray-800";
   };
 
   const formatDate = (date: string | Date) => {
@@ -82,98 +96,85 @@ export default function HistoryPage() {
     });
   };
 
-  const filterOrdersByDate = (order: Order) => {
-    if (dateFilter === "all") return true;
-
-    const orderDate = new Date(order.createdAt);
-    const now = new Date();
-
-    switch (dateFilter) {
-      case "today":
-        return orderDate.toDateString() === now.toDateString();
-      case "week":
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return orderDate >= weekAgo;
-      case "month":
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        return orderDate >= monthAgo;
-      default:
-        return true;
+  // Función para verificar si una reposición debe ser visible según las reglas de tiempo
+  const isRepositionVisible = (reposition: Reposition) => {
+    // Si el usuario es admin o envíos, pueden ver todas
+    if (user?.area === 'admin' || user?.area === 'envios') {
+      return true;
     }
+
+    // Si no está finalizada, siempre es visible
+    if (!reposition.finalizadoAt && !reposition.completedAt) return true;
+
+    const now = new Date();
+    const finalized = new Date(reposition.finalizadoAt || reposition.completedAt);
+    const hoursSinceFinalized = (now.getTime() - finalized.getTime()) / (1000 * 60 * 60);
+
+    // Si es el área solicitante (creadora), puede ver por 24 horas
+    if (user?.area === reposition.solicitanteArea) {
+      return hoursSinceFinalized <= 24;
+    }
+
+    // Para otras áreas, pueden ver por 12 horas
+    return hoursSinceFinalized <= 12;
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredRepositions = repositions.filter(reposition => {
+    // Aplicar filtro de visibilidad temporal
+    if (!isRepositionVisible(reposition)) return false;
+
     const matchesSearch = searchTerm === "" || 
-      order.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.clienteHotel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.noSolicitud?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tipoPrenda?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.color?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tela?.toLowerCase().includes(searchTerm.toLowerCase());
+      reposition.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reposition.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reposition.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reposition.motivo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reposition.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesArea = areaFilter === "all" || order.currentArea === areaFilter;
+    const matchesArea = areaFilter === "all" || 
+      reposition.currentArea === areaFilter || 
+      reposition.solicitanteArea === areaFilter;
 
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || reposition.status === statusFilter;
+
+    const matchesUrgency = urgencyFilter === "all" || reposition.urgencia === urgencyFilter;
+
+    const matchesType = typeFilter === "all" || reposition.tipo === typeFilter;
+
+    const matchesAccident = accidentFilter === "all" || 
+      (accidentFilter === "with_accident" && reposition.areaCausanteDano) ||
+      (accidentFilter === "without_accident" && !reposition.areaCausanteDano);
 
     const matchesDate = (() => {
       if (dateFilter === "all") return true;
 
-      const orderDate = new Date(order.createdAt);
+      const repositionDate = new Date(reposition.createdAt);
       const now = new Date();
 
       switch (dateFilter) {
         case "today":
-          return orderDate.toDateString() === now.toDateString();
+          return repositionDate.toDateString() === now.toDateString();
         case "week":
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return orderDate >= weekAgo;
+          return repositionDate >= weekAgo;
         case "month":
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return orderDate >= monthAgo;
+          return repositionDate >= monthAgo;
         case "quarter":
           const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return orderDate >= quarterAgo;
+          return repositionDate >= quarterAgo;
         case "semester":
           const semesterAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-          return orderDate >= semesterAgo;
+          return repositionDate >= semesterAgo;
         case "year":
           const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return orderDate >= yearAgo;
+          return repositionDate >= yearAgo;
         default:
           return true;
       }
     })();
 
-    const matchesSize = (() => {
-      if (sizeFilter === "all") return true;
-      const pieces = order.totalPiezas;
-      switch (sizeFilter) {
-        case "small": return pieces >= 1 && pieces <= 49;
-        case "medium": return pieces >= 50 && pieces <= 99;
-        case "large": return pieces >= 100;
-        default: return true;
-      }
-    })();
-
-    const matchesCompletionTime = (() => {
-      if (completionTimeFilter === "all" || !order.completedAt) return true;
-
-      const created = new Date(order.createdAt);
-      const completed = new Date(order.completedAt);
-      const diffDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
-
-      switch (completionTimeFilter) {
-        case "fast": return diffDays < 1;
-        case "normal": return diffDays >= 1 && diffDays <= 3;
-        case "slow": return diffDays > 3;
-        default: return true;
-      }
-    })();
-
-    const matchesPausedFilter = includePaused || order.status !== 'paused';
-
-    return matchesSearch && matchesArea && matchesStatus && matchesDate && matchesSize && matchesCompletionTime && matchesPausedFilter;
+    return matchesSearch && matchesArea && matchesStatus && matchesDate && 
+           matchesUrgency && matchesType && matchesAccident;
   }).sort((a, b) => {
     let aValue: any, bValue: any;
 
@@ -182,21 +183,21 @@ export default function HistoryPage() {
         aValue = new Date(a.createdAt);
         bValue = new Date(b.createdAt);
         break;
-      case "completedAt":
-        aValue = a.completedAt ? new Date(a.completedAt) : new Date(0);
-        bValue = b.completedAt ? new Date(b.completedAt) : new Date(0);
+      case "finalizadoAt":
+        aValue = a.finalizadoAt ? new Date(a.finalizadoAt) : new Date(0);
+        bValue = b.finalizadoAt ? new Date(b.finalizadoAt) : new Date(0);
         break;
       case "folio":
         aValue = a.folio;
         bValue = b.folio;
         break;
-      case "clienteHotel":
-        aValue = a.clienteHotel;
-        bValue = b.clienteHotel;
+      case "cliente":
+        aValue = a.cliente || "";
+        bValue = b.cliente || "";
         break;
-      case "totalPiezas":
-        aValue = a.totalPiezas;
-        bValue = b.totalPiezas;
+      case "piezas":
+        aValue = a.piezas;
+        bValue = b.piezas;
         break;
       default:
         aValue = new Date(a.createdAt);
@@ -210,25 +211,26 @@ export default function HistoryPage() {
     }
   });
 
-  const completedOrders = filteredOrders.filter(order => order.status === 'completed');
-  const activeOrders = filteredOrders.filter(order => order.status === 'active');
+  const completedRepositions = filteredRepositions.filter(repo => repo.status === 'completado');
+  const activeRepositions = filteredRepositions.filter(repo => repo.status === 'en_proceso');
+  const pendingRepositions = filteredRepositions.filter(repo => repo.status === 'pendiente');
 
   const deleteMutation = useMutation({
-    mutationFn: async (orderId: number) => {
-      const response = await fetch(`/api/orders/${orderId}`, {
+    mutationFn: async (repositionId: number) => {
+      const response = await fetch(`/api/repositions/${repositionId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Error al eliminar pedido');
+        throw new Error(error.message || 'Error al eliminar reposición');
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repositions/history"] });
       toast({
-        title: "Pedido eliminado",
-        description: "El pedido ha sido eliminado correctamente",
+        title: "Reposición eliminada",
+        description: "La reposición ha sido eliminada correctamente",
       });
     },
     onError: (error: any) => {
@@ -240,11 +242,11 @@ export default function HistoryPage() {
     },
   });
 
-  const handleDeleteOrder = async (orderId: number) => {
+  const handleDeleteReposition = async (repositionId: number) => {
     if (user?.area !== 'admin' && user?.area !== 'envios') {
       toast({
         title: "Sin permisos",
-        description: "Solo Admin o Envíos pueden eliminar pedidos",
+        description: "Solo Admin o Envíos pueden eliminar reposiciones",
         variant: "destructive",
       });
       return;
@@ -262,14 +264,14 @@ export default function HistoryPage() {
     });
 
     if (result.isConfirmed) {
-      deleteMutation.mutate(orderId);
+      deleteMutation.mutate(repositionId);
     }
   };
 
   const handleExportToExcel = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch('/api/history/export', {
+      const response = await fetch('/api/repositions/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +281,7 @@ export default function HistoryPage() {
           statusFilter,
           areaFilter,
           dateFilter,
-          orders: filteredOrders
+          repositions: filteredRepositions
         }),
       });
 
@@ -292,7 +294,7 @@ export default function HistoryPage() {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `historial-pedidos-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `historial-reposiciones-${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -320,13 +322,20 @@ export default function HistoryPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Historial de Pedidos</h1>
-          <p className="text-gray-600 mt-2">Registro completo de todos los pedidos del sistema</p>
+          <h1 className="text-3xl font-bold text-gray-800">Historial de Reposiciones</h1>
+          <p className="text-gray-600 mt-2">Registro completo de todas las reposiciones del sistema</p>
+          {user?.area !== 'admin' && user?.area !== 'envios' && (
+            <p className="text-sm text-yellow-600 mt-1">
+              * Las reposiciones finalizadas se ocultan después de {user?.area ? 
+                (filteredRepositions.some(r => r.solicitanteArea === user.area) ? '24 horas' : '12 horas') 
+                : '12 horas'}
+            </p>
+          )}
         </div>
         <Button 
           variant="outline" 
           onClick={handleExportToExcel}
-          disabled={isExporting || filteredOrders.length === 0}
+          disabled={isExporting || filteredRepositions.length === 0}
         >
           <Download className="mr-2 h-4 w-4" />
           {isExporting ? 'Exportando...' : 'Exportar Excel'}
@@ -338,34 +347,32 @@ export default function HistoryPage() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredOrders.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total de Reposiciones</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredRepositions.length}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-600">Pedidos Activos</p>
-              <p className="text-2xl font-bold text-blue-600">{activeOrders.length}</p>
+              <p className="text-sm font-medium text-gray-600">Pendientes</p>
+              <p className="text-2xl font-bold text-yellow-600">{pendingRepositions.length}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-600">Pedidos Completados</p>
-              <p className="text-2xl font-bold text-green-600">{completedOrders.length}</p>
+              <p className="text-sm font-medium text-gray-600">En Proceso</p>
+              <p className="text-2xl font-bold text-blue-600">{activeRepositions.length}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-600">Tasa de Éxito</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {filteredOrders.length > 0 ? Math.round((completedOrders.length / filteredOrders.length) * 100) : 0}%
-              </p>
+              <p className="text-sm font-medium text-gray-600">Completadas</p>
+              <p className="text-2xl font-bold text-green-600">{completedRepositions.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -384,7 +391,7 @@ export default function HistoryPage() {
             <div className="relative col-span-1 md:col-span-2">
               <Input
                 type="text"
-                placeholder="Buscar por folio, cliente, modelo, No. solicitud, tipo, color, tela..."
+                placeholder="Buscar por folio, cliente, modelo, motivo, descripción..."
                 className="pl-10 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -408,9 +415,11 @@ export default function HistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los Estados</SelectItem>
-                <SelectItem value="active">En Proceso</SelectItem>
-                <SelectItem value="completed">Finalizados</SelectItem>
-                <SelectItem value="paused">Pausados</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="en_proceso">En Proceso</SelectItem>
+                <SelectItem value="completado">Completado</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+                <SelectItem value="pausado">Pausado</SelectItem>
               </SelectContent>
             </Select>
 
@@ -420,7 +429,6 @@ export default function HistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las Áreas</SelectItem>
-                <SelectItem value="patronaje">Patronaje</SelectItem>
                 <SelectItem value="corte">Corte</SelectItem>
                 <SelectItem value="bordado">Bordado</SelectItem>
                 <SelectItem value="ensamble">Ensamble</SelectItem>
@@ -429,7 +437,7 @@ export default function HistoryPage() {
                 <SelectItem value="envios">Envíos</SelectItem>
                 <SelectItem value="almacen">Almacén</SelectItem>
                 <SelectItem value="diseño">Diseño</SelectItem>
-                <SelectItem value="operaciones">Operaciones</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -450,42 +458,41 @@ export default function HistoryPage() {
               </SelectContent>
             </Select>
 
-            <Select value={sizeFilter} onValueChange={setSizeFilter}>
+            <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Tamaño pedido" />
+                <SelectValue placeholder="Urgencia" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tamaños</SelectItem>
-                <SelectItem value="small">Pequeño (1-49 piezas)</SelectItem>
-                <SelectItem value="medium">Mediano (50-99 piezas)</SelectItem>
-                <SelectItem value="large">Grande (100+ piezas)</SelectItem>
+                <SelectItem value="all">Todas las urgencias</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Media</SelectItem>
+                <SelectItem value="baja">Baja</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={completionTimeFilter} onValueChange={setCompletionTimeFilter}>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Tiempo completado" />
+                <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tiempos</SelectItem>
-                <SelectItem value="fast">Rápido (&lt; 1 día)</SelectItem>
-                <SelectItem value="normal">Normal (1-3 días)</SelectItem>
-                <SelectItem value="slow">Lento (&gt; 3 días)</SelectItem>
+                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="reparacion">Reparación</SelectItem>
+                <SelectItem value="rehechura">Rehechura</SelectItem>
+                <SelectItem value="ajuste">Ajuste</SelectItem>
+                <SelectItem value="calidad">Control de Calidad</SelectItem>
               </SelectContent>
             </Select>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="include-paused"
-                checked={includePaused}
-                onChange={(e) => setIncludePaused(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <label htmlFor="include-paused" className="text-sm font-medium">
-                Incluir pausados
-              </label>
-            </div>
+            <Select value={accidentFilter} onValueChange={setAccidentFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Área causante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="with_accident">Con área causante</SelectItem>
+                <SelectItem value="without_accident">Sin área causante</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Controles de ordenamiento */}
@@ -498,10 +505,10 @@ export default function HistoryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="createdAt">Fecha creación</SelectItem>
-                  <SelectItem value="completedAt">Fecha finalización</SelectItem>
+                  <SelectItem value="finalizadoAt">Fecha finalización</SelectItem>
                   <SelectItem value="folio">Folio</SelectItem>
-                  <SelectItem value="clienteHotel">Cliente</SelectItem>
-                  <SelectItem value="totalPiezas">Cantidad piezas</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
+                  <SelectItem value="piezas">Cantidad piezas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -522,7 +529,7 @@ export default function HistoryPage() {
 
           {/* Resumen de filtros activos */}
           <div className="flex flex-wrap gap-2 mt-4">
-            {(searchTerm || statusFilter !== 'all' || areaFilter !== 'all' || dateFilter !== 'all' || sizeFilter !== 'all' || completionTimeFilter !== 'all' || includePaused) && (
+            {(searchTerm || statusFilter !== 'all' || areaFilter !== 'all' || dateFilter !== 'all' || urgencyFilter !== 'all' || typeFilter !== 'all' || accidentFilter !== 'all') && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Filtros activos:</span>
                 {searchTerm && (
@@ -539,9 +546,9 @@ export default function HistoryPage() {
                     setStatusFilter('all');
                     setAreaFilter('all');
                     setDateFilter('all');
-                    setSizeFilter('all');
-                    setCompletionTimeFilter('all');
-                    setIncludePaused(false);
+                    setUrgencyFilter('all');
+                    setTypeFilter('all');
+                    setAccidentFilter('all');
                   }}
                   className="h-6 text-xs"
                 >
@@ -554,10 +561,10 @@ export default function HistoryPage() {
           {/* Estadísticas de resultados */}
           <div className="mt-4 p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-600">
             <div className="text-sm text-gray-600 dark:text-gray-300">
-              Mostrando <span className="font-semibold text-gray-900 dark:text-white">{filteredOrders.length}</span> de <span className="font-semibold text-gray-900 dark:text-white">{orders.length}</span> pedidos
-              {filteredOrders.length !== orders.length && (
+              Mostrando <span className="font-semibold text-gray-900 dark:text-white">{filteredRepositions.length}</span> de <span className="font-semibold text-gray-900 dark:text-white">{repositions.length}</span> reposiciones
+              {filteredRepositions.length !== repositions.length && (
                 <span className="ml-2 text-blue-600 dark:text-blue-400">
-                  ({Math.round((filteredOrders.length / orders.length) * 100)}% del total)
+                  ({Math.round((filteredRepositions.length / repositions.length) * 100)}% del total)
                 </span>
               )}
             </div>
@@ -565,11 +572,11 @@ export default function HistoryPage() {
         </CardContent>
       </Card>
 
-      {/* Orders List */}
+      {/* Repositions List */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Historial de Pedidos ({filteredOrders.length})
+            Historial de Reposiciones ({filteredRepositions.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -581,99 +588,98 @@ export default function HistoryPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredOrders.map((order) => (
-                <div key={order.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              {filteredRepositions.map((reposition) => (
+                <div key={reposition.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-2">
                         <div>
-                          <h3 className="font-semibold text-gray-800">{order.folio}</h3>
-                          <p className="text-sm text-gray-600">{order.clienteHotel}</p>
+                          <h3 className="font-semibold text-gray-800">{reposition.folio}</h3>
+                          <p className="text-sm text-gray-600">{reposition.cliente}</p>
                         </div>
-                        <Badge className={getStatusBadgeColor(order.status)}>
-                          {order.status === 'completed' ? 'Finalizado' : 'En Proceso'}
+                        <Badge className={getStatusBadgeColor(reposition.status)}>
+                          {reposition.status === 'completado' ? 'Completado' : 
+                           reposition.status === 'en_proceso' ? 'En Proceso' : 
+                           reposition.status === 'pendiente' ? 'Pendiente' :
+                           reposition.status === 'cancelado' ? 'Cancelado' : 'Pausado'}
                         </Badge>
-                        <Badge className={getAreaBadgeColor(order.currentArea)}>
-                          {getAreaDisplayName(order.currentArea)}
+                        <Badge className={getAreaBadgeColor(reposition.currentArea)}>
+                          {getAreaDisplayName(reposition.currentArea)}
                         </Badge>
+                        {reposition.urgencia && (
+                          <Badge className={getUrgencyBadgeColor(reposition.urgencia)}>
+                            {reposition.urgencia.toUpperCase()}
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                         <div>
-                          <span className="font-medium">Modelo:</span> {order.modelo}
+                          <span className="font-medium">Modelo:</span> {reposition.modelo}
                         </div>
                         <div>
-                          <span className="font-medium">Tipo:</span> {order.tipoPrenda}
+                          <span className="font-medium">Tipo:</span> {reposition.tipo}
                         </div>
                         <div>
-                          <span className="font-medium">Color:</span> {order.color}
+                          <span className="font-medium">Piezas:</span> {reposition.piezas}
                         </div>
                         <div>
-                          <span className="font-medium">Tela:</span> {order.tela}
+                          <span className="font-medium">Motivo:</span> {reposition.motivo}
                         </div>
                         <div>
-                          <span className="font-medium">Piezas:</span> {order.totalPiezas}
+                          <span className="font-medium">Solicitante:</span> {getAreaDisplayName(reposition.solicitanteArea)}
                         </div>
-                        <div>
-                          <span className="font-medium">No. Solicitud:</span> {order.noSolicitud}
-                        </div>
+                        {reposition.areaCausanteDano && (
+                          <div>
+                            <span className="font-medium">Área causante:</span> {getAreaDisplayName(reposition.areaCausanteDano)}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Creado</p>
-                      <p className="text-sm font-medium">{formatDate(order.createdAt)}</p>
-                      {order.completedAt && (
+                      <p className="text-sm font-medium">{formatDate(reposition.createdAt)}</p>
+                      {reposition.finalizadoAt && (
                         <>
                           <p className="text-sm text-gray-500 mt-2">Finalizado</p>
-                          <p className="text-sm font-medium">{formatDate(order.completedAt)}</p>
+                          <p className="text-sm font-medium">{formatDate(reposition.finalizadoAt)}</p>
                         </>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRepositionId(reposition.id);
+                        setShowHistory(true);
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Ver Historial
+                    </Button>
+                    {(user?.area === 'admin' || user?.area === 'envios') && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedOrderId(order.id);
-                          setShowDetails(true);
-                        }}
+                        onClick={() => handleDeleteReposition(reposition.id)}
+                        className="text-red-600 hover:text-red-700"
+                        disabled={deleteMutation.isPending}
                       >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Detalles
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOrderId(order.id);
-                          setShowHistory(true);
-                        }}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Historial
-                      </Button>
-                      {(user?.area === 'admin' || user?.area === 'envios') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteOrder(order.id)}
-                          className="text-red-600 hover:text-red-700"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Eliminar
-                        </Button>
-                      )}
-                    </div>
+                    )}
+                  </div>
                 </div>
               ))}
 
-              {filteredOrders.length === 0 && (
+              {filteredRepositions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar size={48} className="mx-auto mb-4 text-gray-300" />
-                  <p>No se encontraron pedidos con los filtros aplicados</p>
+                  <p>No se encontraron reposiciones con los filtros aplicados</p>
                 </div>
               )}
             </div>
@@ -682,22 +688,37 @@ export default function HistoryPage() {
       </Card>
       </div>
 
-      {/* Modals */}
-      {showHistory && selectedOrderId && (
-        <OrderHistoryModal
-          open={showHistory}
-          onClose={() => setShowHistory(false)}
-          orderId={selectedOrderId}
-        />
-      )}
-
-      {showDetails && selectedOrderId && (
-        <OrderDetailsModal
-          open={showDetails}
-          onClose={() => setShowDetails(false)}
-          orderId={selectedOrderId}
-        />
+      {/* History Modal */}
+      {showHistory && selectedRepositionId && (
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Historial de Reposición</DialogTitle>
+            </DialogHeader>
+            <RepositionHistoryContent repositionId={selectedRepositionId} />
+          </DialogContent>
+        </Dialog>
       )}
     </Layout>
+  );
+}
+
+// Componente para mostrar el historial de una reposición específica
+function RepositionHistoryContent({ repositionId }: { repositionId: number }) {
+  const { data: history = [], isLoading } = useQuery({
+    queryKey: [`/api/repositions/${repositionId}/history`],
+  });
+
+  if (isLoading) {
+    return <div>Cargando historial...</div>;
+  }
+
+  return (
+    <HistoryTimeline 
+      events={history} 
+      title="Cronología de eventos" 
+      type="reposition"
+      showDetailedInfo={true}
+    />
   );
 }

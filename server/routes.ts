@@ -14,6 +14,7 @@ import { authenticateToken } from './auth';
 import path from 'path';
 import fs from 'fs';
 import { upload, uploadBackup, handleMulterError } from './upload';
+import ExcelJS from 'exceljs';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -896,6 +897,13 @@ function registerRepositionRoutes(app: Express) {
   router.post("/", authenticateToken, upload.array('documents', 5), handleMulterError, async (req, res) => {
     try {
       const user = (req as any).user;
+      
+      // Verificar que el área pueda crear reposiciones
+      const allowedAreas = ['corte', 'bordado', 'ensamble', 'plancha', 'calidad', 'envios', 'admin'];
+      if (!allowedAreas.includes(user.area)) {
+        return res.status(403).json({ message: "Su área no tiene permisos para crear reposiciones" });
+      }
+
       let repositionData;
 
       // Parse repositionData from form
@@ -1846,6 +1854,123 @@ function registerRepositionRoutes(app: Express) {
       res.status(500).json({ message: "Error al reparar reposiciones" });
     }
   });
+
+  // Endpoint para historial de reposiciones con filtros de tiempo
+  router.get("/history", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Autenticación requerida" });
+
+    const user = req.user!;
+
+    try {
+      // Obtener todas las reposiciones
+      const allRepositions = await db
+        .select()
+        .from(repositions)
+        .where(ne(repositions.status, 'eliminado'))
+        .orderBy(desc(repositions.createdAt));
+
+      // Filtrar según las reglas de visibilidad temporal
+      const now = new Date();
+      const filteredRepositions = allRepositions.filter(reposition => {
+        // Si no está finalizada, siempre es visible
+        if (!reposition.finalizadoAt) return true;
+
+        const finalized = new Date(reposition.finalizadoAt);
+        const hoursSinceFinalized = (now.getTime() - finalized.getTime()) / (1000 * 60 * 60);
+
+        // Admin y envíos pueden ver todas
+        if (user.area === 'admin' || user.area === 'envios') {
+          return true;
+        }
+
+        // Área solicitante puede ver por 24 horas
+        if (user.area === reposition.solicitanteArea) {
+          return hoursSinceFinalized <= 24;
+        }
+
+        // Otras áreas pueden ver por 12 horas
+        return hoursSinceFinalized <= 12;
+      });
+
+      res.json(filteredRepositions);
+    } catch (error) {
+      console.error('Error getting repositions history:', error);
+      res.status(500).json({ message: "Error al obtener el historial de reposiciones" });
+    }
+  });
+
+  // Endpoint para exportar historial de reposiciones
+  router.post("/export", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Autenticación requerida" });
+
+    try {
+      const body = await req.json();
+      const { repositions } = body;
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Historial de Reposiciones');
+
+      // Configurar columnas
+      worksheet.columns = [
+        { header: 'Folio', key: 'folio', width: 15 },
+        { header: 'Cliente', key: 'cliente', width: 20 },
+        { header: 'Modelo', key: 'modelo', width: 15 },
+        { header: 'Tipo', key: 'tipo', width: 15 },
+        { header: 'Piezas', key: 'piezas', width: 10 },
+        { header: 'Motivo', key: 'motivo', width: 20 },
+        { header: 'Descripción', key: 'descripcion', width: 30 },
+        { header: 'Urgencia', key: 'urgencia', width: 12 },
+        { header: 'Estado', key: 'status', width: 12 },
+        { header: 'Área Actual', key: 'currentArea', width: 15 },
+        { header: 'Área Solicitante', key: 'solicitanteArea', width: 15 },
+        { header: 'Área Causante', key: 'areaCausanteDano', width: 15 },
+        { header: 'Fecha Creación', key: 'createdAt', width: 20 },
+        { header: 'Fecha Finalización', key: 'finalizadoAt', width: 20 }
+      ];
+
+      // Agregar datos
+      repositions.forEach((reposition: any) => {
+        worksheet.addRow({
+          folio: reposition.folio,
+          cliente: reposition.cliente,
+          modelo: reposition.modelo,
+          tipo: reposition.tipo,
+          piezas: reposition.piezas,
+          motivo: reposition.motivo,
+          descripcion: reposition.descripcion,
+          urgencia: reposition.urgencia,
+          status: reposition.status === 'completado' ? 'Completado' : 
+                  reposition.status === 'en_proceso' ? 'En Proceso' :
+                  reposition.status === 'pendiente' ? 'Pendiente' :
+                  reposition.status === 'cancelado' ? 'Cancelado' : 'Pausado',
+          currentArea: reposition.currentArea,
+          solicitanteArea: reposition.solicitanteArea,
+          areaCausanteDano: reposition.areaCausanteDano || '',
+          createdAt: new Date(reposition.createdAt).toLocaleString('es-ES', { timeZone: 'America/Mexico_City' }),
+          finalizadoAt: reposition.finalizadoAt ? new Date(reposition.finalizadoAt).toLocaleString('es-ES', { timeZone: 'America/Mexico_City' }) : ''
+        });
+      });
+
+      // Estilo para header
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F3FF' }
+      };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="historial-reposiciones.xlsx"');
+      res.send(buffer);
+
+    } catch (error) {
+      console.error('Export error:', error);
+      res.status(500).json({ message: "Error al exportar datos" });
+    }
+  });
+
 
   app.use("/api/repositions", router);
 }

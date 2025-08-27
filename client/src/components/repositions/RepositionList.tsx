@@ -41,7 +41,7 @@ const areas = [
 
 const statusColors = {
   pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  aprobado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', 
+  aprobado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   rechazado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   en_proceso: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   completado: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
@@ -66,14 +66,14 @@ const accidentFilters = [
 ];
 
 // Componente separado para manejar la lógica del área creadora
-function CreatorAreaButton({ 
-  reposition, 
-  userArea, 
-  manualTimes, 
-  setManualTimes 
-}: { 
-  reposition: Reposition; 
-  userArea: string; 
+function CreatorAreaButton({
+  reposition,
+  userArea,
+  manualTimes,
+  setManualTimes
+}: {
+  reposition: Reposition;
+  userArea: string;
   manualTimes: Record<number, { startTime: string; endTime: string; startDate: Date | undefined; endDate: Date | undefined }>;
   setManualTimes: React.Dispatch<React.SetStateAction<Record<number, { startTime: string; endTime: string; startDate: Date | undefined; endDate: Date | undefined }>>>;
 }) {
@@ -95,7 +95,7 @@ function CreatorAreaButton({
           const history = await historyResponse.json();
 
           // Contar cuántas veces ha sido aceptada una transferencia hacia esta área creadora
-          const transfersToCreatorArea = history.filter((entry: any) => 
+          const transfersToCreatorArea = history.filter((entry: any) =>
             entry.action === 'transfer_accepted' && entry.toArea === reposition.solicitanteArea
           ).length;
 
@@ -130,21 +130,21 @@ function CreatorAreaButton({
         // Si ya existe un timer registrado, mostrar mensaje con detalles
         if (timer && (timer.manualStartTime || timer.startTime)) {
           let timeDetails = '';
-          
+
           if (timer.manualStartTime && timer.manualEndTime) {
             // Tiempo manual registrado
             const startDate = timer.manualDate || 'N/A';
             const endDate = timer.manualEndDate || timer.manualDate || 'N/A';
             timeDetails = `Tiempo registrado:\n` +
-                         `Inicio: ${startDate} a las ${timer.manualStartTime}\n` +
-                         `Fin: ${endDate} a las ${timer.manualEndTime}`;
+              `Inicio: ${startDate} a las ${timer.manualStartTime}\n` +
+              `Fin: ${endDate} a las ${timer.manualEndTime}`;
           } else if (timer.startTime && timer.endTime) {
             // Tiempo automático registrado
             const start = new Date(timer.startTime);
             const end = new Date(timer.endTime);
             timeDetails = `Tiempo registrado:\n` +
-                         `Inicio: ${start.toLocaleDateString()} a las ${start.toLocaleTimeString()}\n` +
-                         `Fin: ${end.toLocaleDateString()} a las ${end.toLocaleTimeString()}`;
+              `Inicio: ${start.toLocaleDateString()} a las ${start.toLocaleTimeString()}\n` +
+              `Fin: ${end.toLocaleDateString()} a las ${end.toLocaleTimeString()}`;
           } else {
             timeDetails = 'Ya existe un registro de tiempo para esta área.';
           }
@@ -291,9 +291,9 @@ export function RepositionList({ userArea }: { userArea: string }) {
 
       // Filtrar reposiciones completadas, eliminadas y canceladas para usuarios que no son admin ni envíos
       if (userArea !== 'admin' && userArea !== 'envios') {
-        return data.filter((repo: any) => 
-          repo.status !== 'completado' && 
-          repo.status !== 'eliminado' && 
+        return data.filter((repo: any) =>
+          repo.status !== 'completado' &&
+          repo.status !== 'eliminado' &&
           repo.status !== 'cancelado'
         );
       }
@@ -322,9 +322,9 @@ export function RepositionList({ userArea }: { userArea: string }) {
         throw new Error('Error al cargar notificaciones');
       }
       const allNotifications = await res.json();
-      return allNotifications.filter((n: any) => 
+      return allNotifications.filter((n: any) =>
         !n.read && (
-          n.type?.includes('reposition') || 
+          n.type?.includes('reposition') ||
           n.type?.includes('completion') ||
           n.type === 'completion_approval_needed'
         )
@@ -358,8 +358,8 @@ export function RepositionList({ userArea }: { userArea: string }) {
 
   // Función para verificar si una reposición tiene transferencia pendiente desde mi área
   const hasPendingTransferFromMyArea = (repositionId: number) => {
-    return pendingTransfers.some((transfer: any) => 
-      transfer.repositionId === repositionId && 
+    return pendingTransfers.some((transfer: any) =>
+      transfer.repositionId === repositionId &&
       transfer.fromArea === userArea &&
       transfer.status === 'pending'
     );
@@ -665,7 +665,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
           const history = await historyResponse.json();
 
           // Contar cuántas veces ha sido aceptada una transferencia hacia esta área
-          const transfersToCreatorArea = history.filter((entry: any) => 
+          const transfersToCreatorArea = history.filter((entry: any) =>
             entry.action === 'transfer_accepted' && entry.toArea === reposition.solicitanteArea
           ).length;
 
@@ -687,11 +687,11 @@ export function RepositionList({ userArea }: { userArea: string }) {
 
     try {
       // Asegurar que las fechas estén en formato YYYY-MM-DD
-      const startDate = timeData.startDate instanceof Date 
+      const startDate = timeData.startDate instanceof Date
         ? format(timeData.startDate, 'yyyy-MM-dd')
         : timeData.startDate;
 
-      const endDate = timeData.endDate instanceof Date 
+      const endDate = timeData.endDate instanceof Date
         ? format(timeData.endDate, 'yyyy-MM-dd')
         : timeData.endDate;
 
@@ -781,7 +781,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
             const history = await historyResponse.json();
 
             // Contar cuántas veces ha sido aceptada una transferencia hacia esta área
-            const transfersToCreatorArea = history.filter((entry: any) => 
+            const transfersToCreatorArea = history.filter((entry: any) =>
               entry.action === 'transfer_accepted' && entry.toArea === reposition.solicitanteArea
             ).length;
 
@@ -801,7 +801,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
           const response = await fetch(`/api/repositions/${repositionId}/timer`);
           const timer = await response.json();
 
-          if (!timer|| (!timer.manualStartTime && !timer.startTime)) {
+          if (!timer || (!timer.manualStartTime && !timer.startTime)) {
             Swal.fire({
               title: 'Tiempo no registrado',
               text: 'Debe registrar el tiempo de trabajo antes de transferir la reposición.',
@@ -1080,7 +1080,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
         text: 'Esta acción moverá la reposición a tu área',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#10B981',        confirmButtonText: 'Aceptar',        cancelButtonText: 'Cancelar'
+        confirmButtonColor: '#10B981', confirmButtonText: 'Aceptar', cancelButtonText: 'Cancelar'
       });
 
       if (result.isConfirmed) {
@@ -1095,7 +1095,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
 
   // Filter repositions based on all criteria
   const filteredRepositions = repositions.filter((reposition: any) => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       reposition.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reposition.solicitanteNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reposition.modeloPrenda.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1104,7 +1104,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
       reposition.solicitanteArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reposition.currentArea?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesAccident = filterAccident === 'all' || 
+    const matchesAccident = filterAccident === 'all' ||
       reposition.tipoAccidente?.toLowerCase().includes(filterAccident.replace('_', ' '));
 
     const matchesStatus = statusFilter === 'all' || reposition.status === statusFilter;
@@ -1232,7 +1232,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
             const history = await historyResponse.json();
 
             // Contar cuántas veces ha sido aceptada una transferencia hacia esta área
-            const transfersToCreatorArea = history.filter((entry: any) => 
+            const transfersToCreatorArea = history.filter((entry: any) =>
               entry.action === 'transfer_accepted' && entry.toArea === reposition.solicitanteArea
             ).length;
 
@@ -1335,7 +1335,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
           <div className="text-sm text-gray-500 mb-4">
             {error instanceof Error ? error.message : 'Error desconocido'}
           </div>
-          <Button 
+          <Button
             onClick={() => queryClient.refetchQueries({ queryKey: ['repositions'] })}
             className="bg-purple-600 hover:bg-purple-700"
           >
@@ -1519,47 +1519,47 @@ export function RepositionList({ userArea }: { userArea: string }) {
         </CardContent>
       </Card>
 
-        {(userArea === 'admin' || userArea === 'envios' || userArea === 'diseño' || userArea === 'almacen') && (
-          <>
-            <Select value={filterArea} onValueChange={setFilterArea}>
-              <SelectTrigger className="w-48 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100">
-                <SelectValue placeholder="Filtrar por área" />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-700">
-                <SelectItem value="all" className="text-gray-900 dark:text-gray-100">{(userArea === 'diseño' || userArea === 'almacen') ? 'Todas las aprobadas' : 'Todas las áreas'}</SelectItem>
-                {areas.map(area => (
-                  <SelectItem key={area} value={area} className="text-gray-900 dark:text-gray-100">
-                    {area.charAt(0).toUpperCase() + area.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {(userArea === 'admin' || userArea === 'envios' || userArea === 'diseño' || userArea === 'almacen') && (
+        <>
+          <Select value={filterArea} onValueChange={setFilterArea}>
+            <SelectTrigger className="w-48 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100">
+              <SelectValue placeholder="Filtrar por área" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-700">
+              <SelectItem value="all" className="text-gray-900 dark:text-gray-100">{(userArea === 'diseño' || userArea === 'almacen') ? 'Todas las aprobadas' : 'Todas las áreas'}</SelectItem>
+              {areas.map(area => (
+                <SelectItem key={area} value={area} className="text-gray-900 dark:text-gray-100">
+                  {area.charAt(0).toUpperCase() + area.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {(userArea === 'admin' || userArea === 'envios') && (
-              <>
+          {(userArea === 'admin' || userArea === 'envios') && (
+            <>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-history"
+                  checked={showHistory}
+                  onCheckedChange={setShowHistory}
+                />
+                <Label htmlFor="show-history">Ver historial completo</Label>
+              </div>
+
+              {showHistory && (
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="show-history"
-                    checked={showHistory}
-                    onCheckedChange={setShowHistory}
+                    id="include-deleted"
+                    checked={includeDeleted}
+                    onCheckedChange={setIncludeDeleted}
                   />
-                  <Label htmlFor="show-history">Ver historial completo</Label>
+                  <Label htmlFor="include-deleted">Incluir eliminadas</Label>
                 </div>
-
-                {showHistory && (
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="include-deleted"
-                      checked={includeDeleted}
-                      onCheckedChange={setIncludeDeleted}
-                    />
-                    <Label htmlFor="include-deleted">Incluir eliminadas</Label>
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </>
+      )}
 
 
       {pendingTransfers.length > 0 && (
@@ -1577,11 +1577,11 @@ export function RepositionList({ userArea }: { userArea: string }) {
                   <div>
                     <p className="font-semibold text-gray-800">
                       Reposición desde {transfer.fromArea}
-                                        </p>
+                    </p>
                     <p className="text-sm text-gray-600">
                       {transfer.notes && `Notas: ${transfer.notes}`}
                     </p>
-<p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {new Date(transfer.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -1663,7 +1663,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                     <span>•</span>
                     <span>{new Date(reposition.createdAt).toLocaleString('es-ES', {
                       day: '2-digit',
-                      month: '2-digit', 
+                      month: '2-digit',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
@@ -1744,7 +1744,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
 
 
                             <div>
-                              <CreatorAreaButton 
+                              <CreatorAreaButton
                                 reposition={reposition}
                                 userArea={userArea}
                                 manualTimes={manualTimes}
@@ -1778,7 +1778,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                                           <Calendar
                                             mode="single"
                                             selected={manualTimes[reposition.id]?.startDate}
-                                            onSelect={(date) => updateManualTime(reposition.id, 'startDate', date)}
+                                            onSelect={(date) => updateManualTime(reposition.id, 'startDate', date!)}
                                             disabled={(date) =>
                                               date > new Date() || date < new Date("1900-01-01")
                                             }
@@ -1825,7 +1825,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                                           <Calendar
                                             mode="single"
                                             selected={manualTimes[reposition.id]?.endDate}
-                                            onSelect={(date) => updateManualTime(reposition.id, 'endDate', date)}
+                                            onSelect={(date) => updateManualTime(reposition.id, 'endDate', date!)}
                                             disabled={(date) =>
                                               date > new Date() || date < new Date("1900-01-01")
                                             }
@@ -1876,7 +1876,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                       </>
                     )}
 
-                    {(userArea === 'operaciones' || userArea === 'admin' || userArea === 'envios') && 
+                    {(userArea === 'operaciones' || userArea === 'admin' || userArea === 'envios') &&
                      reposition.status === 'pendiente' && (
                       <>
                         <Button
@@ -1903,7 +1903,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                     {reposition.status !== 'completado' && reposition.status !== 'eliminado' && reposition.status !== 'cancelado' && (
                       <>
                         {/* Botón de finalización solo para admin/envios o el creador de la solicitud */}
-                        {(userArea === 'admin' || userArea === 'envios' || reposition.solicitanteArea ===userArea) && (
+                        {(userArea === 'admin' || userArea === 'envios' || reposition.solicitanteArea === userArea) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1932,7 +1932,7 @@ export function RepositionList({ userArea }: { userArea: string }) {
                       </>
                     )}
 
-                    {(userArea === 'admin' || userArea === 'envios') && 
+                    {(userArea === 'admin' || userArea === 'envios') &&
                      reposition.status !== 'eliminado' && (
                       <Button
                         variant="outline"
@@ -1946,8 +1946,8 @@ export function RepositionList({ userArea }: { userArea: string }) {
                     )}
 
                     {/* Botón de reactivación para reposiciones completadas */}
-                    {(userArea === 'admin' || userArea === 'envios') && 
-                     reposition.status === 'completado' && 
+                    {(userArea === 'admin' || userArea === 'envios') &&
+                     reposition.status === 'completado' &&
                      canReactivate(reposition) && (
                       <Button
                         variant="outline"

@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, CheckCircle, Info, Clock, Bell, Package, RefreshCw, Plus, X, XCircle, Trash2, BellRing, Settings, AlertTriangle } from "lucide-react";
+import { ArrowRight, CheckCircle, Info, Clock, Bell, Package, RefreshCw, Plus, X, XCircle, Trash2, BellRing, Settings, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { type Transfer } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NotificationPermission } from './notification-permission';
 
 interface NotificationsPanelProps {
@@ -17,6 +17,92 @@ interface NotificationsPanelProps {
 export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [expandedNotifications, setExpandedNotifications] = useState<Set<number>>(new Set());
+  const [disintegratingNotifications, setDisintegratingNotifications] = useState<Set<number>>(new Set());
+
+  // Agregar estilos CSS para la animación
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes disintegrate {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+          filter: blur(0px);
+        }
+        25% {
+          transform: scale(1.05) rotate(1deg);
+          opacity: 0.8;
+        }
+        50% {
+          transform: scale(0.95) rotate(-0.5deg);
+          opacity: 0.6;
+          filter: blur(1px);
+        }
+        75% {
+          transform: scale(0.8) rotate(0.5deg);
+          opacity: 0.3;
+          filter: blur(2px);
+        }
+        100% {
+          transform: scale(0.6) rotate(0deg);
+          opacity: 0;
+          filter: blur(3px);
+        }
+      }
+
+      @keyframes particle-float {
+        0% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-20px) scale(0);
+          opacity: 0;
+        }
+      }
+
+      .disintegrating {
+        animation: disintegrate 0.8s ease-in-out forwards;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .disintegrating::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3) 0%, transparent 70%);
+        animation: particle-float 0.8s ease-out forwards;
+        pointer-events: none;
+      }
+
+      .disintegrating::after {
+        content: '';
+        position: absolute;
+        top: 10%;
+        left: 10%;
+        right: 10%;
+        bottom: 10%;
+        background: 
+          radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.5), transparent),
+          radial-gradient(2px 2px at 40% 70%, rgba(255,255,255,0.4), transparent),
+          radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.6), transparent),
+          radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.3), transparent),
+          radial-gradient(2px 2px at 80% 10%, rgba(255,255,255,0.4), transparent);
+        animation: particle-float 0.6s 0.2s ease-out forwards;
+        pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
 
   const { data: pendingTransfers = [] } = useQuery<Transfer[]>({
@@ -96,11 +182,31 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
 
   const markNotificationReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
+      // Agregar la notificación al conjunto de desintegración
+      setDisintegratingNotifications(prev => new Set([...prev, notificationId]));
+      
+      // Esperar un poco para que se vea la animación
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       const res = await apiRequest("POST", `/api/repositions/${notificationId}/read`);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, notificationId) => {
+      // Remover de la lista de desintegración después de completar
+      setDisintegratingNotifications(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+    onError: (_, notificationId) => {
+      // Si hay error, también remover de la lista de desintegración
+      setDisintegratingNotifications(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
     },
   });
 
@@ -272,6 +378,22 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
 
   const totalNotifications = repositionNotifications.length + pendingTransfers.length;
 
+  const toggleNotificationExpansion = (notificationId: number) => {
+    setExpandedNotifications(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(notificationId)) {
+        newSet.delete(notificationId);
+      } else {
+        newSet.add(notificationId);
+      }
+      return newSet;
+    });
+  };
+
+  const isNotificationExpanded = (notificationId: number) => {
+    return expandedNotifications.has(notificationId);
+  };
+
 
 
   return (
@@ -326,53 +448,123 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                   {repositionNotifications.length}
                 </Badge>
               </div>
-              {repositionNotifications.map((notification: any) => (
-                <div
-                  key={notification.id}
-                  className={`relative overflow-hidden rounded-lg border ${getNotificationColor(notification.type)} transition-all duration-200 hover:shadow-md cursor-pointer group`}
-                  onClick={() => markNotificationReadMutation.mutate(notification.id)}
-                >
-                  <div className="relative p-3 md:p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 md:w-12 md:h-12 ${getIconColor(notification.type)} rounded-lg flex items-center justify-center`}>
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-foreground text-sm leading-tight">
-                          {notification.title}
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">
-                          {notification.repositionId && (
-                            <Badge variant="outline" className="text-xs font-medium w-fit">
-                              Reposición #{notification.repositionId}
-                            </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {formatTimeAgo(notification.createdAt)}
-                          </span>
+              {repositionNotifications.map((notification: any) => {
+                const isExpanded = isNotificationExpanded(notification.id);
+                const messageLength = notification.message?.length || 0;
+                const shouldShowExpandButton = messageLength > 100;
+                
+                const isDisintegrating = disintegratingNotifications.has(notification.id);
+                
+                return (
+                  <div
+                    key={notification.id}
+                    className={`relative overflow-hidden rounded-lg border ${getNotificationColor(notification.type)} transition-all duration-200 hover:shadow-md group ${isDisintegrating ? 'disintegrating' : ''}`}
+                  >
+                    <div className="relative p-3 md:p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 md:w-12 md:h-12 ${getIconColor(notification.type)} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          {getNotificationIcon(notification.type)}
                         </div>
-                        {notification.type === 'completion_approval_needed' && (
-                          <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-950/50 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                            <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
-                              ⚠️ Solicitud de finalización pendiente de aprobación
-                            </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-semibold text-foreground text-sm leading-tight flex-1">
+                              {notification.title}
+                            </h4>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {shouldShowExpandButton && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleNotificationExpansion(notification.id);
+                                  }}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3" />
+                                  )}
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                                disabled={isDisintegrating || markNotificationReadMutation.isPending}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markNotificationReadMutation.mutate(notification.id);
+                                }}
+                              >
+                                {isDisintegrating ? (
+                                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                        {notification.type === 'partial_transfer_warning' && (
-                          <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-200 dark:border-red-800">
-                            <p className="text-xs text-red-800 dark:text-red-200 font-medium">
-                              🚫 RESTRICCIÓN: No puedes pausar este pedido hasta recibir la orden completa
+                          
+                          <div className="mt-1">
+                            <p className={`text-sm text-muted-foreground ${!isExpanded && shouldShowExpandButton ? 'line-clamp-2' : ''}`}>
+                              {notification.message}
                             </p>
+                            {shouldShowExpandButton && !isExpanded && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleNotificationExpansion(notification.id);
+                                }}
+                                className="text-xs text-primary hover:underline mt-1 font-medium"
+                              >
+                                Ver más...
+                              </button>
+                            )}
+                            {shouldShowExpandButton && isExpanded && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleNotificationExpansion(notification.id);
+                                }}
+                                className="text-xs text-primary hover:underline mt-1 font-medium"
+                              >
+                                Ver menos
+                              </button>
+                            )}
                           </div>
-                        )}
+                          
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">
+                            {notification.repositionId && (
+                              <Badge variant="outline" className="text-xs font-medium w-fit">
+                                Reposición #{notification.repositionId}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {formatTimeAgo(notification.createdAt)}
+                            </span>
+                          </div>
+                          {notification.type === 'completion_approval_needed' && (
+                            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-950/50 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                              <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
+                                ⚠️ Solicitud de finalización pendiente de aprobación
+                              </p>
+                            </div>
+                          )}
+                          {notification.type === 'partial_transfer_warning' && (
+                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-200 dark:border-red-800">
+                              <p className="text-xs text-red-800 dark:text-red-200 font-medium">
+                                🚫 RESTRICCIÓN: No puedes pausar este pedido hasta recibir la orden completa
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
