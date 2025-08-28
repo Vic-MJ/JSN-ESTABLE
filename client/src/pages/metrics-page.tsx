@@ -105,6 +105,24 @@ export default function MetricsPage() {
 
   const currentMonthName = new Date(parseInt(selectedYear), parseInt(selectedMonth)).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
+  // Helper function to get display names for areas
+  const getAreaDisplayName = (areaKey: string): string => {
+    const areaMap: { [key: string]: string } = {
+      'R&D': 'Investigación y Desarrollo',
+      'Production': 'Producción',
+      'Quality Assurance': 'Control de Calidad',
+      'Sales': 'Ventas',
+      'Marketing': 'Marketing',
+      'Human Resources': 'Recursos Humanos',
+      'Finance': 'Finanzas',
+      'Operations': 'Operaciones',
+      'IT': 'Tecnologías de la Información',
+      'Customer Support': 'Soporte al Cliente'
+    };
+    return areaMap[areaKey] || areaKey;
+  };
+
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-900 p-6">
@@ -207,7 +225,7 @@ export default function MetricsPage() {
                 },
                 {
                   title: "Área Más Activa",
-                  value: overallMetrics.mostActiveArea,
+                  value: getAreaDisplayName(overallMetrics.mostActiveArea),
                   icon: Target,
                   gradient: "from-purple-500 to-purple-600",
                   bgColor: "bg-purple-50",
@@ -278,17 +296,17 @@ export default function MetricsPage() {
                     </h3>
                     <ResponsiveContainer width="100%" height={350}>
                       <BarChart data={monthlyMetrics.byArea}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0 dark:border-slate-700" />
-                        <XAxis dataKey="area" tick={{ fontSize: 12, fill: 'var(--color-text-gray-700)' }} />
-                        <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-gray-700)' }} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e293b',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white'
-                          }}
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-slate-600" />
+                        <XAxis 
+                          dataKey="area" 
+                          tick={{ fontSize: 12, fill: 'currentColor' }} 
+                          className="text-gray-700 dark:text-white"
                         />
+                        <YAxis 
+                          tick={{ fontSize: 12, fill: 'currentColor' }} 
+                          className="text-gray-700 dark:text-white"
+                        />
+                        
                         <Bar dataKey="count" fill="url(#colorGradient)" radius={[4, 4, 0, 0]} />
                         <defs>
                           <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
@@ -311,6 +329,7 @@ export default function MetricsPage() {
                           cy="50%"
                           labelLine={false}
                           label={({ area, percentage }) => `${area}: ${percentage}%`}
+                          labelLine={false}
                           outerRadius={120}
                           fill="#8884d8"
                           dataKey="count"
@@ -319,14 +338,7 @@ export default function MetricsPage() {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e293b',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white'
-                          }}
-                        />
+                        
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -340,7 +352,7 @@ export default function MetricsPage() {
                           <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                               <div className="space-y-2">
-                                <p className="font-bold text-gray-800 dark:text-gray-100 text-lg">{area.area}</p>
+                                <p className="font-bold text-gray-800 dark:text-gray-100 text-lg">{getAreaDisplayName(area.area)}</p>
                                 <div className="space-y-1">
                                   <p className="text-sm text-gray-600 dark:text-gray-300">{area.count} reposiciones</p>
                                 </div>
@@ -388,17 +400,20 @@ export default function MetricsPage() {
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">Distribución de Causas</h3>
                     <ResponsiveContainer width="100%" height={350}>
                       <BarChart data={monthlyMetrics.byCause}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0 dark:border-slate-700" />
-                        <XAxis dataKey="cause" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 11, fill: 'var(--color-text-gray-700)' }} />
-                        <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-gray-700)' }} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e293b',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white'
-                          }}
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-slate-600" />
+                        <XAxis 
+                          dataKey="cause" 
+                          angle={-45} 
+                          textAnchor="end" 
+                          height={100} 
+                          tick={{ fontSize: 11, fill: 'currentColor' }} 
+                          className="text-gray-700 dark:text-white"
                         />
+                        <YAxis 
+                          tick={{ fontSize: 12, fill: 'currentColor' }} 
+                          className="text-gray-700 dark:text-white"
+                        />
+                        
                         <Bar dataKey="count" fill="#EF4444" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -406,7 +421,7 @@ export default function MetricsPage() {
 
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Ranking de Causas</h3>
-                    <div className="space-y-3">
+                    <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
                       {monthlyMetrics.byCause.map((cause: any, index: number) => (
                         <div key={cause.cause} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 rounded-xl hover:shadow-md transition-all duration-300">
                           <div className="flex items-center space-x-3">

@@ -60,18 +60,18 @@ interface RepositionHistory {
 }
 
 const statusColors = {
-  pendiente: 'bg-yellow-100 text-yellow-800',
-  aprobado: 'bg-green-100 text-green-800',
-  rechazado: 'bg-red-100 text-red-800',
-  en_proceso: 'bg-blue-100 text-blue-800',
-  completado: 'bg-gray-100 text-gray-800',
-  cancelado: 'bg-orange-100 text-orange-800'
+  pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  aprobado: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  rechazado: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  en_proceso: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  completado: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  cancelado: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
 };
 
 const urgencyColors = {
-  urgente: 'bg-red-100 text-red-800',
-  intermedio: 'bg-yellow-100 text-yellow-800',
-  poco_urgente: 'bg-green-100 text-green-800'
+  urgente: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  intermedio: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  poco_urgente: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
 };
 
 export function RepositionDetail({ 
@@ -94,7 +94,7 @@ export function RepositionDetail({
       const response = await fetch(`/api/repositions/${repositionId}?t=${Date.now()}`);
       if (!response.ok) throw new Error('Failed to fetch reposition');
       const data = await response.json();
-      
+
       return data;
     },
     staleTime: 0, // Always consider data stale to force refetch
@@ -137,7 +137,7 @@ export function RepositionDetail({
     }
   });
 
-  
+
 
   const { data: productos = [] } = useQuery({
     queryKey: ['reposition-products', repositionId],
@@ -281,12 +281,12 @@ export function RepositionDetail({
                 <Badge className={urgencyColors[reposition.urgencia as keyof typeof urgencyColors]}>
                   {reposition.urgencia}
                 </Badge>
-                <Badge variant="outline">
+                <Badge variant="outline" className="border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300">
                   {reposition.type}
                 </Badge>
               </div>
               <div className="flex gap-2">
-                <Button 
+                {/* <Button 
                   onClick={() => {
                     queryClient.removeQueries({ queryKey: ['reposition', repositionId] });
                     queryClient.removeQueries({ queryKey: ['reposition-pieces', repositionId] });
@@ -301,8 +301,8 @@ export function RepositionDetail({
                 >
                   <Activity className="w-4 h-4 mr-2" />
                   Actualizar
-                </Button>
-                
+                </Button> */}
+
                 {/* Botón de Editar para áreas de envíos y admin */}
                 {(user?.area === 'envios' || user?.area === 'admin') && (
                   <Button 
@@ -321,7 +321,7 @@ export function RepositionDetail({
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Printer className="w-4 h-4 mr-2" />
-                  Resumen Ensamble
+                  Resumen
                 </Button>
                 <Button variant="outline" onClick={onClose}>
                   <X className="w-4 h-4" />
@@ -392,7 +392,7 @@ export function RepositionDetail({
                 <p className="font-semibold text-gray-700 dark:text-gray-300">Nombre del Causante del Daño</p>
                 <p className="dark:text-white">{reposition.causanteDano}</p>
               </div>
-              
+
               {reposition.tipoAccidente && (
                 <div>
                   <p className="font-semibold text-gray-700 dark:text-gray-300">Tipo de Accidente</p>
@@ -413,7 +413,7 @@ export function RepositionDetail({
               )}
 
               <div>
-                <p className="font-semibold text-gray-700 dark:text-gray-300">Área actual</p>
+                <p className="font-semibold text-gray-700 dark:text-gray-300">Área Actual</p>
                 <p className="capitalize dark:text-white">{reposition.currentArea}</p>
               </div>
 
@@ -571,7 +571,7 @@ export function RepositionDetail({
             </Card>
           )}
 
-          
+
 
           {/* Piezas Solicitadas - Solo para reposiciones */}
           {reposition.type !== 'reproceso' && pieces.length > 0 && (
@@ -579,7 +579,7 @@ export function RepositionDetail({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between dark:text-white">
                   <span>Piezas Solicitadas</span>
-                  <Badge variant="outline" className="text-sm">
+                  <Badge variant="outline" className="border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 text-sm">
                     Total: {pieces.reduce((total, piece) => total + (typeof piece.cantidad === 'number' ? piece.cantidad : parseInt(piece.cantidad) || 0), 0)} piezas
                   </Badge>
                 </CardTitle>
@@ -591,48 +591,48 @@ export function RepositionDetail({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Tipo de Pieza</TableHead>
-                        <TableHead>Talla</TableHead>
-                        <TableHead>Cantidad</TableHead>
-                        <TableHead>No° Folio Original</TableHead>
-                        <TableHead>Subtotal</TableHead>
+                        <TableHead className="dark:text-gray-300">Tipo de Pieza</TableHead>
+                        <TableHead className="dark:text-gray-300">Talla</TableHead>
+                        <TableHead className="dark:text-gray-300">Cantidad</TableHead>
+                        <TableHead className="dark:text-gray-300">No° Folio Original</TableHead>
+                        <TableHead className="dark:text-gray-300">Subtotal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pieces.map((piece: RepositionPiece, index: number) => {
                         const cantidad = typeof piece.cantidad === 'number' ? piece.cantidad : parseInt(piece.cantidad) || 0;
-                        
+
                         // Determinar el tipo de pieza basado en el producto correspondiente
                         let tipoPieza = reposition.tipoPieza; // Default al primer producto
-                        
+
                         if (reposition.type === 'repocision' && productos && productos.length > 0) {
                           // Para reposiciones con múltiples productos, distribuir las piezas entre los productos
                           // Dividir las piezas proporcionalmente entre los productos disponibles
                           const piecesPerProduct = Math.ceil(pieces.length / productos.length);
                           const productIndex = Math.floor(index / piecesPerProduct);
-                          
+
                           if (productIndex < productos.length) {
                             tipoPieza = productos[productIndex].tipoPieza;
                           }
                         }
-                        
+
                         return (
                           <TableRow key={`main-${piece.id}`}>
-                            <TableCell className="font-medium">{tipoPieza}</TableCell>
-                            <TableCell>{piece.talla}</TableCell>
+                            <TableCell className="font-medium dark:text-white">{tipoPieza}</TableCell>
+                            <TableCell className="dark:text-white">{piece.talla}</TableCell>
                             <TableCell>
                               <Badge variant="secondary">{cantidad}</Badge>
                             </TableCell>
                             <TableCell className="text-sm text-gray-600">
                               {piece.folioOriginal && piece.folioOriginal !== '' ? (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-xs border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300">
                                   {piece.folioOriginal}
                                 </Badge>
                               ) : (
-                                <span className="text-gray-400">Sin folio</span>
+                                <span className="text-gray-400 dark:text-gray-500">Sin folio</span>
                               )}
                             </TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium dark:text-white">
                               {cantidad} pz
                             </TableCell>
                           </TableRow>
@@ -665,7 +665,7 @@ export function RepositionDetail({
                   </div>
                 </div>
 
-                
+
                 {/* Resumen General Final */}
                 <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-700">
                   <div className="flex justify-between items-center mb-3">

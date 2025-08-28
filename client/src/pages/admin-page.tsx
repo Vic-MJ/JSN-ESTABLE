@@ -561,7 +561,7 @@ export default function AdminPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        {/* <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -601,9 +601,9 @@ export default function AdminPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        <Card>
+        {/* <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -615,16 +615,19 @@ export default function AdminPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
         {/* Gestión de Usuarios Mejorada */}
         <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm dark:border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Gestión de Usuarios</span>
+              <CardTitle className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5" />
+                  <span>Gestión de Usuarios</span>
+                </div>
+                <h4 className="text-sm text-muted-foreground">Usuarios Registrados: {users.length}</h4>
               </CardTitle>
               <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                 <DialogTrigger asChild>
@@ -1054,7 +1057,7 @@ export default function AdminPage() {
       </Card>
 
       {/* Recent Activity */}
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm dark:border-slate-700">
+      {/* <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm dark:border-slate-700">
         <CardHeader>
           <CardTitle>Actividad Reciente del Sistema</CardTitle>
         </CardHeader>
@@ -1083,7 +1086,7 @@ export default function AdminPage() {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
         {/* Modales */}
         <Dialog open={showResetModal} onOpenChange={(open) => {

@@ -213,16 +213,27 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Progreso</span>
-                  <Badge variant="outline">{trackingData.reposition.progress}%</Badge>
+                  <Badge variant="outline" className="border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                    {trackingData.reposition.progress}%
+                  </Badge>
                 </div>
                 <Progress value={trackingData.reposition.progress} className="h-2" />
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Área actual:</span>
-                  <Badge>{getAreaDisplayName(trackingData.reposition.currentArea)}</Badge>
+                  <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    {getAreaDisplayName(trackingData.reposition.currentArea)}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Estado:</span>
-                  <Badge variant={trackingData.reposition.status === 'completado' ? 'default' : 'secondary'}>
+                  <Badge 
+                    variant={trackingData.reposition.status === 'completado' ? 'default' : 'secondary'}
+                    className={
+                      trackingData.reposition.status === 'completado' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                    }
+                  >
                     {trackingData.reposition.status}
                   </Badge>
                 </div>
@@ -243,41 +254,41 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
                       {getStepIcon(step.status)}
                       {index < trackingData.steps.length - 1 && (
                         <div className={`w-px h-12 mt-2 ${
-                          step.status === 'completed' ? 'bg-green-300' : 'bg-gray-300'
+                          step.status === 'completed' ? 'bg-green-300 dark:bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
                         }`} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className={`p-4 rounded-lg border ${
                         step.status === 'current' 
-                          ? 'bg-blue-50 border-blue-200' 
+                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700' 
                           : step.status === 'completed'
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-gray-50 border-gray-200'
+                          ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700'
+                          : 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600'
                       }`}>
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-medium">{getAreaDisplayName(step.area)}</h4>
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{getAreaDisplayName(step.area)}</h4>
                             {step.date && (
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                                 <Clock className="w-4 h-4 inline mr-1" />
                                 Fecha: {new Date(step.date).toLocaleDateString('es-ES')}
                               </p>
                             )}
                             {step.timestamp && !step.date && (
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                                 <Clock className="w-4 h-4 inline mr-1" />
                                 {formatDate(step.timestamp)}
                               </p>
                             )}
                             {step.timeSpent && (
-                              <p className="text-sm text-blue-600 font-medium mt-1">
+                              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mt-1">
                                 <Clock className="w-4 h-4 inline mr-1" />
                                 Tiempo: {step.timeSpent}
                               </p>
                             )}
                             {step.user && (
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-gray-600 dark:text-gray-300">
                                 <User className="w-4 h-4 inline mr-1" />
                                 {step.user}
                               </p>
@@ -288,13 +299,18 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
                               step.status === 'completed' ? 'default' : 
                               step.status === 'current' ? 'secondary' : 'outline'
                             }
+                            className={
+                              step.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                              step.status === 'current' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
+                              'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
+                            }
                           >
                             {step.status === 'completed' ? 'Completado' : 
                              step.status === 'current' ? 'En Proceso' : 'Pendiente'}
                           </Badge>
                         </div>
                         {step.notes && (
-                          <p className="text-sm text-gray-700 mt-2 bg-white p-2 rounded border">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 bg-white dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600">
                             {step.notes}
                           </p>
                         )}
@@ -315,9 +331,9 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {trackingData.areaTimes && Object.entries(trackingData.areaTimes).map(([area, minutes]) => (
-                    <div key={area} className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-sm">{getAreaDisplayName(area)}</h4>
-                      <p className="text-lg font-bold text-blue-600">
+                    <div key={area} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                      <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">{getAreaDisplayName(area)}</h4>
+                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                         {Math.floor(minutes / 60)}h {Math.round(minutes % 60)}m
                       </p>
                     </div>
@@ -361,7 +377,13 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
                         <Badge 
                           variant={transfer.status === 'accepted' ? 'default' : 
                                   transfer.status === 'rejected' ? 'destructive' : 'secondary'}
-                          className="capitalize"
+                          className={`capitalize ${
+                            transfer.status === 'accepted' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : transfer.status === 'rejected'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          }`}
                         >
                           {transfer.status === 'accepted' ? 'Aceptada' : 
                            transfer.status === 'rejected' ? 'Rechazada' : 'Pendiente'}
@@ -407,7 +429,7 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
 
                       {transfer.consumoTela && (
                         <div className="mt-3">
-                          <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20">
+                          <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/30">
                             Consumo de tela: {transfer.consumoTela} metros
                           </Badge>
                         </div>

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,10 @@ import {
   LogOut, 
   User, 
   MessageSquare,
-  Settings
+  Settings,
+  Lightbulb,
+  Clock,
+  X
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useQuery } from "@tanstack/react-query";
@@ -38,6 +41,13 @@ export function TopBar({ onShowNotifications }: TopBarProps) {
   const { user, logoutMutation } = useAuth();
   const { theme } = useTheme();
   const [showProfile, setShowProfile] = useState(false);
+  const [showUpdateAnnouncement, setShowUpdateAnnouncement] = useState(true);
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  });
 
   const { data: pendingTransfers = [] } = useQuery<any[]>({
     queryKey: ["/api/transfers/pending"],
@@ -131,11 +141,92 @@ export function TopBar({ onShowNotifications }: TopBarProps) {
     }
   };
 
+  // Función para calcular tiempo restante hasta la actualización
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const targetDate = new Date('2025-10-12T00:00:00');
+      const now = new Date();
+      const difference = targetDate.getTime() - now.getTime();
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
+
+        setTimeLeft({ days, hours, minutes, seconds });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const totalNotifications = pendingTransfers.length + repositionNotifications.length;
 
   return (
     <>
-      <div className="h-16 border-b bg-[var(--jasana-topbar-bg)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--jasana-topbar-bg)]/60 sticky top-0 z-50">
+      {/* Anuncio de próxima actualización */}
+      {showUpdateAnnouncement && (
+        <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white px-4 py-2 sticky top-0 z-50 shadow-lg">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <Lightbulb className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                  <span className="font-semibold text-sm">
+                    🚀 ¡Ayúdanos a mejorar!
+                  </span>
+                  <span className="text-xs sm:text-sm opacity-90">
+                    Si tienes ideas que crees que podrían mejorar la aplicación, ¡háznolas saber!
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Contador regresivo */}
+              <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
+                <Clock className="w-4 h-4" />
+                <div className="text-xs font-mono">
+                  <span className="font-semibold">Próxima actualización:</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span>{timeLeft.days}d</span>
+                    <span>{timeLeft.hours}h</span>
+                    <span>{timeLeft.minutes}m</span>
+                    <span>{timeLeft.seconds}s</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Versión móvil del contador */}
+              <div className="sm:hidden flex flex-col items-center bg-white/20 rounded px-2 py-1">
+                <div className="text-xs font-semibold">12-09-2025</div>
+                <div className="text-xs font-mono">
+                  {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+                </div>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowUpdateAnnouncement(false)}
+                className="h-6 w-6 p-0 text-white hover:bg-white/20"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="h-16 border-b bg-[var(--jasana-topbar-bg)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--jasana-topbar-bg)]/60 sticky top-0 z-40">
         <div className="flex h-full items-center justify-between px-6">
           {/* Información del usuario */}
           <div className="flex items-center gap-3">
