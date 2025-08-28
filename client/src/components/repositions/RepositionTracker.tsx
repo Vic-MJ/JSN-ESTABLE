@@ -423,7 +423,7 @@ export function RepositionTracker({ repositionId, onClose }: RepositionTrackerPr
                       {transfer.notes && (
                         <div className="mt-3 p-3 bg-white dark:bg-slate-700 rounded border border-gray-200 dark:border-gray-600">
                           <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notas de transferencia:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{transfer.notes}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words">{transfer.notes}</p>
                         </div>
                       )}
 

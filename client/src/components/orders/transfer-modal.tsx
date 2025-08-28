@@ -290,7 +290,7 @@ export function TransferModal({ open, onClose, orderId }: TransferModalProps) {
                   placeholder="Agregar comentarios sobre la transferencia..."
                   value={transferData.notes}
                   onChange={(e) => setTransferData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 resize-none text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                  className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 resize-none text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 whitespace-pre-wrap break-words word-wrap"
                 />
               </div>
             </div>

@@ -811,13 +811,33 @@ function registerDashboardRoutes(app: Express) {
     }
   });
 
+  // Endpoint para actividad reciente del dashboard
   app.get("/api/dashboard/recent-activity", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Autenticación requerida" });
 
     try {
       const user = req.user!;
-      const recentOrders = await storage.getRecentOrders(user.area, 5);
-      const recentRepositions = await storage.getRecentRepositions(user.area, 5);
+
+      // Obtener reposiciones recientes (solo las últimas 3)
+      let repositionsQuery = db
+        .select({
+          id: repositions.id,
+          folio: repositions.folio,
+          type: repositions.type,
+          status: repositions.status,
+          currentArea: repositions.currentArea,
+          createdAt: repositions.createdAt,
+          solicitanteNombre: repositions.solicitanteNombre,
+          modeloPrenda: repositions.modeloPrenda,
+          urgencia: repositions.urgencia
+        })
+        .from(repositions)
+        .where(ne(repositions.status, 'eliminado'))
+        .orderBy(desc(repositions.createdAt))
+        .limit(3);
+
+      const recentRepositions = await repositionsQuery;
+      const recentOrders = await storage.getRecentOrders(user.area, 5); // Mantener 5 para órdenes
 
       res.json({
         orders: recentOrders,
@@ -897,7 +917,7 @@ function registerRepositionRoutes(app: Express) {
   router.post("/", authenticateToken, upload.array('documents', 5), handleMulterError, async (req, res) => {
     try {
       const user = (req as any).user;
-      
+
       // Verificar que el área pueda crear reposiciones
       const allowedAreas = ['corte', 'bordado', 'ensamble', 'plancha', 'calidad', 'envios', 'admin'];
       if (!allowedAreas.includes(user.area)) {

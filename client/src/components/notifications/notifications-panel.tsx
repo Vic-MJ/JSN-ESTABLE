@@ -8,6 +8,7 @@ import { ArrowRight, CheckCircle, Info, Clock, Bell, Package, RefreshCw, Plus, X
 import { type Transfer } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { NotificationPermission } from './notification-permission';
+import { format } from "date-fns"; // Importar format de date-fns
 
 interface NotificationsPanelProps {
   open: boolean;
@@ -184,10 +185,10 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
     mutationFn: async (notificationId: number) => {
       // Agregar la notificación al conjunto de desintegración
       setDisintegratingNotifications(prev => new Set([...prev, notificationId]));
-      
+
       // Esperar un poco para que se vea la animación
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       const res = await apiRequest("POST", `/api/repositions/${notificationId}/read`);
       return await res.json();
     },
@@ -452,9 +453,9 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                 const isExpanded = isNotificationExpanded(notification.id);
                 const messageLength = notification.message?.length || 0;
                 const shouldShowExpandButton = messageLength > 100;
-                
+
                 const isDisintegrating = disintegratingNotifications.has(notification.id);
-                
+
                 return (
                   <div
                     key={notification.id}
@@ -506,7 +507,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="mt-1">
                             <p className={`text-sm text-muted-foreground ${!isExpanded && shouldShowExpandButton ? 'line-clamp-2' : ''}`}>
                               {notification.message}
@@ -534,7 +535,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                               </button>
                             )}
                           </div>
-                          
+
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">
                             {notification.repositionId && (
                               <Badge variant="outline" className="text-xs font-medium w-fit">
@@ -577,7 +578,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                   {pendingTransfers.length}
                 </Badge>
               </div>
-              {pendingTransfers.map((transfer) => (
+              {pendingTransfers.map((transfer: any) => (
                 <div
                   key={transfer.id}
                   className="relative overflow-hidden rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:border-blue-800 transition-all duration-200 hover:shadow-md group"
@@ -594,6 +595,16 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatTimeAgo(transfer.createdAt)}
                         </p>
+                        {transfer.notes && transfer.notes.trim() !== '' && (
+                          <div className="mt-3">
+                            <p className="text-xs font-medium text-foreground mb-1">Comentario del solicitante:</p>
+                            <div className="bg-white p-2 rounded border-l-4 border-blue-400">
+                              <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words word-wrap break-all overflow-wrap-anywhere max-w-full">
+                                {transfer.notes}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         <div className="flex flex-col sm:flex-row gap-2 mt-3">
                           <Button
                             size="sm"

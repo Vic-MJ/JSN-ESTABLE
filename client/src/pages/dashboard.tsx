@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/layout";
-import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { OrdersTable } from "@/components/orders/orders-table";
 import { TransferModal } from "@/components/orders/transfer-modal";
@@ -73,12 +72,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <StatsCards />
-
-      {/* Recent Activity */}
+      {/* Reposiciones Recientes */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Actividad Reciente</h3>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Reposiciones Recientes</h3>
         <RecentActivity />
       </div>
 
@@ -88,6 +84,7 @@ export default function Dashboard() {
         onTransferOrder={handleTransferOrder}
         onViewHistory={handleViewHistory}
         onViewDetails={handleViewDetails}
+        key={`orders-${Date.now()}`} // Forzar re-render cuando sea necesario
       />
 
       {/* Modals */}

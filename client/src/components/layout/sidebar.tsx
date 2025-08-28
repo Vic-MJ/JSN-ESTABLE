@@ -162,7 +162,7 @@ export function CustomSidebar({ onShowNotifications, onCreateOrder, onCreateRepo
               JASANA
             </h1>
             <p className="text-xs text-muted-foreground">Sistema de Pedidos</p>
-            <p className="text-xs text-muted-foreground">V3.0.11 Sp25</p>
+            <p className="text-xs text-muted-foreground">V3.1.11 Sp25</p>
           </div>
           <SidebarTrigger className="ml-auto h-6 w-6 group-data-[collapsible=icon]:ml-0" />
         </div>
@@ -270,7 +270,7 @@ export function CustomSidebar({ onShowNotifications, onCreateOrder, onCreateRepo
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={(e) => {
                     e.preventDefault();
@@ -295,7 +295,7 @@ export function CustomSidebar({ onShowNotifications, onCreateOrder, onCreateRepo
                     <span className="transition-colors duration-200 group-data-[collapsible=icon]:hidden">Historial</span>
                   </div>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
 
               <SidebarMenuItem>
                 <SidebarMenuButton 

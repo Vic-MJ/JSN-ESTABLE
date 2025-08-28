@@ -18,6 +18,10 @@ type Stats = {
 export function StatsCards() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/dashboard/stats"],
+    refetchInterval: 2000, // Refetch cada 2 segundos
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: true,
+    staleTime: 0, // Siempre considerar datos como stale
   });
 
   if (isLoading) {

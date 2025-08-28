@@ -112,11 +112,18 @@ export function useWebSocket() {
 
       // También invalidar otras queries según el tipo de notificación
       if (notification.type?.includes('order')) {
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       }
       if (notification.type?.includes('reposition')) {
-        queryClient.invalidateQueries({ queryKey: ['repositions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/repositions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-activity'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       }
+
+      // Invalidar específicamente las queries del dashboard
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-activity'] });
 
       // Mostrar notificación del navegador
       const notificationService = NotificationService.getInstance();
